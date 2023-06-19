@@ -109,13 +109,13 @@ that is, produced a bunch of non-persistent, then persistent - the current solut
 it's bad anyhow.
 
 _(A complete solution would require a "peek" functionality to see which bucket had the highest priority message, and
-identify a way to find the order between two messages when their priority was equal (an ordering on the messageId might
-possibly be a good way). You'd then always switch to the bucket with the "true next" message. An alternative to "peek"
-might be to always have one message dequeued from each of the buckets, but not removing it: When the `next()` method is
-invoked, one make sure to have present one from each of the `persistent` and `nonPersistent` underlying buckets. Compare
-them, and return the "true next". When the 'remove' call comes, remove the correct message. When the next 'hasNext +
-next' call comes, fetch a replacement for the one returned last time, and compare again. If the remove semantics works
-as hoped, this would effectively be a replacement for the "peek" functionality.)_
+identify a way to find the order between two messages when their priority was equal (an ordering on received datetime,
+then messageId, could maybe be a good order?). You'd then always switch to the bucket with the "true next" message. An
+alternative to "peek" might be to always have one message dequeued from each of the buckets, but not removing it: When
+the `next()` method is invoked, one make sure to have present one from each of the `persistent` and `nonPersistent`
+underlying buckets. Compare them, and return the "true next". When the 'remove' call comes, remove the correct message.
+When the next 'hasNext + next' call comes, fetch a replacement for the one returned last time, and compare again. If the
+remove semantics works as hoped, this would effectively be a replacement for the "peek" functionality.)_
 
 Note that to easily experience this, you should set both the maxPageSize and client prefetch to 1. Otherwise, it seems
 like several of these issues are masked by either the layer above, or on the client - i.e. it reorders, and takes into
@@ -125,11 +125,11 @@ reason about, such large amounts of messages, thus setting these values to 1 giv
 
 PS: It seems like the corresponding topic side of this, StoreDurableSubscriberCursor with TopicStorePrefetch, have had
 some work done for it in 2010 for probably the same type of issue, adding a "immediatePriorityDispatch" flag and
-corresponding functionality: _"ensure new high priority messages get dispatched immediately rather than at the end of the
-next batch, configurable via PendingDurableSubscriberMessageStoragePolicy.immediatePriorityDispatch default true, most
-relevant with prefetch=1"_. I don't fully understand this solution, but can't shake the feeling that it is a literal
-patch instead of handling the underlying problem: Dequeuing from two underlying queues ("buckets") must take into
-account the head of both, finding the "true next" wrt. order and priority.
+corresponding functionality: _"ensure new high priority messages get dispatched immediately rather than at the end of
+the next batch, configurable via PendingDurableSubscriberMessageStoragePolicy.immediatePriorityDispatch default true,
+most relevant with prefetch=1"_. I don't fully understand this solution, but can't shake the feeling that it is a
+literal patch instead of handling the underlying problem: Dequeuing from two underlying queues ("buckets") must take
+into account the head of both, finding the "true next" wrt. order and priority.
 
 **Note: The suggested half-way fix is not possible to implement outside of the ActiveMQ source tree except by heavy
 reflection, as albeit the relevant method is protected, the necessary fields are private. This hacky solution of
