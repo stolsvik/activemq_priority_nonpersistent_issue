@@ -2,14 +2,10 @@ package test;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.ActiveMQPrefetchPolicy;
-import org.apache.activemq.broker.Broker;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.TransportConnector;
 import org.apache.activemq.broker.region.BaseDestination;
-import org.apache.activemq.broker.region.cursors.PendingMessageCursor;
-import org.apache.activemq.broker.region.cursors.StoreQueueCursor;
 import org.apache.activemq.broker.region.policy.IndividualDeadLetterStrategy;
-import org.apache.activemq.broker.region.policy.PendingQueueMessageStoragePolicy;
 import org.apache.activemq.broker.region.policy.PolicyEntry;
 import org.apache.activemq.broker.region.policy.PolicyMap;
 import org.apache.activemq.command.ActiveMQQueue;
@@ -18,6 +14,7 @@ import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
 import org.apache.activemq.store.kahadb.disk.journal.Journal.JournalDiskSyncStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import test.messagecursor_copied.SomewhatFair_Copied_StorePendingQueueMessageStoragePolicy;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -28,11 +25,6 @@ import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.invoke.VarHandle;
-import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -137,10 +129,10 @@ public class Util {
 
 
         /*
-         * If desired, set the "reflection-hacked" 'SomewhatFair_StoreQueueCursor', which half-way fixes the problem.
+         * If desired, set the changed 'SomewhatFair_Copied_StoreQueueCursor', which half-way fixes the problem.
          */
         if (useSomewhatFair_StoreQueueCursor) {
-            allQueuesPolicy.setPendingQueuePolicy(new SomewhatFair_StorePendingQueueMessageStoragePolicy());
+            allQueuesPolicy.setPendingQueuePolicy(new SomewhatFair_Copied_StorePendingQueueMessageStoragePolicy());
         }
 //        allQueuesPolicy.setPendingQueuePolicy(new VMPendingQueueMessageStoragePolicy());
 //        allQueuesPolicy.setPendingQueuePolicy(new StorePendingQueueMessageStoragePolicy());
@@ -176,87 +168,6 @@ public class Util {
         connectionFactory.setMessagePrioritySupported(true);
 
         return new BrokerAndConnectionFactoryActiveMqImpl(brokerService, connectionFactory);
-    }
-
-
-    /**
-     * "Policy" for {@link SomewhatFair_StoreQueueCursor}, configurable via ActiveMQ' PolicyMap.
-     */
-    public static class SomewhatFair_StorePendingQueueMessageStoragePolicy implements PendingQueueMessageStoragePolicy {
-        public PendingMessageCursor getQueuePendingMessageCursor(Broker broker,
-                org.apache.activemq.broker.region.Queue queue) {
-            return new SomewhatFair_StoreQueueCursor(broker, queue);
-        }
-    }
-
-    /**
-     * An extension of {@link StoreQueueCursor} which must use reflection on the private fields to achieve its goal of
-     * overriding the {@link #getNextCursor()} method.
-     * <p>
-     * A better alternative would be to re-implement the entire class, in which case it would also be much easier to
-     * experiment and possibly get a full solution, but this is thwarted by the fact that the necessary class
-     * 'QueueStorePrefetch' is package-private in the ActiveMQ code.
-     */
-    public static class SomewhatFair_StoreQueueCursor extends StoreQueueCursor {
-        private static final VarHandle CURRENT_CURSOR_FIELD;
-        private static final VarHandle NON_PERSISTENT_FIELD;
-        private static final MethodHandle PERSISTENT_FIELD_GETTER;
-
-        static {
-            try {
-                NON_PERSISTENT_FIELD = MethodHandles.privateLookupIn(StoreQueueCursor.class, MethodHandles.lookup())
-                        .findVarHandle(StoreQueueCursor.class, "nonPersistent", PendingMessageCursor.class);
-                CURRENT_CURSOR_FIELD = MethodHandles.privateLookupIn(StoreQueueCursor.class, MethodHandles.lookup())
-                        .findVarHandle(StoreQueueCursor.class, "currentCursor", PendingMessageCursor.class);
-
-                Field persistent = StoreQueueCursor.class.getDeclaredField("persistent");
-                persistent.setAccessible(true);
-                Lookup lookup = MethodHandles.lookup();
-                PERSISTENT_FIELD_GETTER = lookup.unreflectGetter(persistent);
-            }
-            catch (NoSuchFieldException | IllegalAccessException e) {
-                throw new AssertionError("Cant reflect.", e);
-            }
-        }
-
-        public SomewhatFair_StoreQueueCursor(Broker broker, org.apache.activemq.broker.region.Queue queue) {
-            super(broker, queue);
-        }
-
-
-        protected synchronized PendingMessageCursor getNextCursor() throws Exception {
-            // ?: Sanity check that nonPersistent has been set, i.e. that start() has been invoked.
-            PendingMessageCursor nonPersistent = (PendingMessageCursor) NON_PERSISTENT_FIELD.get(this);
-            if (nonPersistent == null) {
-                // -> No, not set, so don't evaluate switching - so that currentCursor never becomes null.
-                return (PendingMessageCursor) CURRENT_CURSOR_FIELD.get(this);
-            }
-
-            // :: Get opposite cursor:
-            PendingMessageCursor persistent;
-            try {
-                persistent = (PendingMessageCursor) PERSISTENT_FIELD_GETTER.invoke(this);
-            }
-            catch (Throwable e) {
-                throw new AssertionError("Couldn't invoke getter of field 'StoreQueueCursor.persistent'.", e);
-            }
-            PendingMessageCursor currentCursor = (PendingMessageCursor) CURRENT_CURSOR_FIELD.get(this);
-            // .. actual oppositeCursor resolving:
-            PendingMessageCursor oppositeCursor = currentCursor == persistent ? nonPersistent : persistent;
-
-            // ?: Do we have any messages in the opposite?
-            if (oppositeCursor.hasNext()) {
-                // -> Yes, so do the switch
-                CURRENT_CURSOR_FIELD.set(this, oppositeCursor);
-                System.out.println("Swithced to: " + oppositeCursor);
-                return oppositeCursor;
-            }
-            else {
-                System.out.println("DID NOT switch, keeping: " + currentCursor);
-            }
-            // E-> Return existing current
-            return currentCursor;
-        }
     }
 
 
