@@ -34,11 +34,6 @@ the 'getNextCursor()' method to always alternate between the buckets if there ar
 are messages in the opposite bucket, then switch. This fixes much - and is probably better for most users, without any
 discernible side effects.
 
-If the QueueStorePrefetch class was public, as all other classes in this package except the corresponding
-TopicStorePrefetch is, then I could have made an alternate implementation in my own code. I have actually successfully
-made an extension of the class now by using reflection on the private fields and overriding the 'getNextCursor()'
-method (which luckily is protected), but this is obviously not ideal.
-
 More detailed:
 
 The problem is the combination of these three methods:
@@ -131,9 +126,6 @@ most relevant with prefetch=1"_. I don't fully understand this solution, but can
 literal patch instead of handling the underlying problem: Dequeuing from two underlying queues ("buckets") must take
 into account the head of both, finding the "true next" wrt. order and priority.
 
-**Note: The suggested half-way fix is not possible to implement outside of the ActiveMQ source tree except by heavy
-reflection, as albeit the relevant method is protected, the necessary fields are private. This hacky solution of
-reflection is implemented in the Util class, look for `SomewhatFair_StorePendingQueueMessageStoragePolicy`. A better
-alternative would be to re-implement the entire class, in which case it would also be much easier to experiment and
-possibly get a full solution, but this is thwarted by the fact that the needed class 'QueueStorePrefetch' is
-package-private in the ActiveMQ code.**
+**Note: There are two implementations of the "SomewhatFair" StoreQueueCursor inside this repo - one using reflection, and
+one copying out enough classes until the compiler stops complaining about package-private classes and methods. Those are
+in the `messagecursor_hacked` and `messagecursor_copied` packages.** 
