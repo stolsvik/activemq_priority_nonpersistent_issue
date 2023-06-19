@@ -1,0 +1,5 @@
+build/
+KahaDB/
+.idea/
+.gradle/
+out/
