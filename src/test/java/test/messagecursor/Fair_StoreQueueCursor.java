@@ -269,7 +269,7 @@ public class Fair_StoreQueueCursor implements PendingMessageCursor {
         _hasNextCalled = false;
 
         // ?: Are they both null?
-        // Note: Semantically, one should invoke .hashNext() in front of each .next(). The null-return situation shall
+        // Note: Semantically, one should invoke .hasNext() in front of each .next(). The null-return situation shall
         // never occur.
         if (_fromPersistent == null && _fromNonPersistent == null) {
             // Note: Neither of the two sub cursors have been advanced, so we're still on NextFromSubCursor.NONE.

@@ -24,9 +24,11 @@ thus effectively ignores prioritization _(since it doesn't even consider the opp
 non-empty)_.
 
 My situation is that in the library Mats3 (https://mats3.io/), one often employ "interactive" messages (priority=9)
-combined with non-persistent messaging - on the same queues. This then obviously leads to the completely opposite result
-than the intention: The supposedly "fast, prioritized, but not entirely reliable" safe or idempotent GET-style
-messages/commands will be starved if there also are a batch of "ordinary" messages going on using the same queues.
+that are also non-persistent. These messages are sent on the same queues as "ordinary" messages: Persistent, with normal
+priority. This combination of message type, along with the described quirk, then obviously leads to the completely
+opposite result than the intention: The supposedly "fast, prioritized, but not entirely reliable" safe or idempotent
+GET-style messages/commands will be starved if there also are a batch of "ordinary" messages going on using the same
+queues.
 
 I have come up with a minimal solution that fixes my problem: I need to remove the starvation, and thus the ignoring of
 prioritization. But this solution will possibly make the dispatch in-order situation worse. What I do, is to change
@@ -209,7 +211,7 @@ class StoreQueueCursor implements PendingMessageCursor {
         _hasNextCalled = false;
 
         // ?: Are they both null?
-        // Note: Semantically, one should invoke .hashNext() in front of each .next(). The null-return situation shall
+        // Note: Semantically, one should invoke .hasNext() in front of each .next(). The null-return situation shall
         // never occur.
         if (_fromPersistent == null && _fromNonPersistent == null) {
             // Note: Neither of the two sub cursors have been advanced, so we're still on NextFromSubCursor.NONE.
