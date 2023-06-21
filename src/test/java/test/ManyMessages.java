@@ -32,7 +32,7 @@ public class ManyMessages {
     // ----- The common test method.
 
     private void runTest(int persistenceSet1, int prioritySet1, int persistenceSet2, int prioritySet2) throws Exception {
-        BrokerAndConnectionFactory brokerAndConnectionFactory = Util.createBroker(JournalDiskSyncStrategy.PERIODIC, 10, 1, false);
+        BrokerAndConnectionFactory brokerAndConnectionFactory = Util.createBroker(JournalDiskSyncStrategy.PERIODIC, 10, 1, true);
 
         int standardMessages = 5000;
         int interactiveMessages = 1000;

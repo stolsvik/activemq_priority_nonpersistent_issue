@@ -37,7 +37,7 @@ public class Mats3 {
     }
 
     @Test
-    public void SOMEWHAT_FAIR_CURSOR_FIXES_mixedNonPersistentWithPrioritized() throws Exception {
+    public void FAIR_CURSOR_FIXES_mixedNonPersistentWithPrioritized() throws Exception {
         doTest(true, 1, true);
     }
 

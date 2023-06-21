@@ -28,7 +28,7 @@ import java.io.IOException;
  *
  *
  */
-class QueueStorePrefetch extends AbstractStoreCursor {
+public class QueueStorePrefetch extends AbstractStoreCursor {
     private static final Logger LOG = LoggerFactory.getLogger(QueueStorePrefetch.class);
     private final MessageStore store;
     private final Queue queue;

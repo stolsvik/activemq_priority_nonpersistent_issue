@@ -14,7 +14,7 @@ import org.apache.activemq.store.kahadb.KahaDBPersistenceAdapter;
 import org.apache.activemq.store.kahadb.disk.journal.Journal.JournalDiskSyncStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import test.messagecursor_copied.SomewhatFair_Copied_StorePendingQueueMessageStoragePolicy;
+import test.messagecursor.Fair_StorePendingQueueMessageStoragePolicy;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -132,7 +132,7 @@ public class Util {
          * If desired, set the changed 'SomewhatFair_Copied_StoreQueueCursor', which half-way fixes the problem.
          */
         if (useSomewhatFair_StoreQueueCursor) {
-            allQueuesPolicy.setPendingQueuePolicy(new SomewhatFair_Copied_StorePendingQueueMessageStoragePolicy());
+            allQueuesPolicy.setPendingQueuePolicy(new Fair_StorePendingQueueMessageStoragePolicy());
         }
 //        allQueuesPolicy.setPendingQueuePolicy(new VMPendingQueueMessageStoragePolicy());
 //        allQueuesPolicy.setPendingQueuePolicy(new StorePendingQueueMessageStoragePolicy());
@@ -270,13 +270,13 @@ public class Util {
         MessageConsumer consumer = session.createConsumer(queue);
         int receivedMessages = 0;
         do {
-            Message msg = consumer.receive(60_000);
+            Message msg = consumer.receive(250);
             if (msg == null) {
                 break;
             }
             log.info("Received message: " + msg.getStringProperty("description") + msg);
             messages.add(msg);
-        } while (++receivedMessages != numMessages);
+        } while (true);
 
         if (messages.size() == numMessages) {
             log.info("Received all expected [" + numMessages + "]...");

@@ -1,3 +1,4 @@
+
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements.  See the NOTICE
  * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
@@ -10,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package test.messagecursor_copied;
+package test.messagecursor;
 
 import org.apache.activemq.broker.Broker;
 import org.apache.activemq.broker.region.MessageReference;
@@ -35,7 +36,7 @@ public class SomewhatFair_Copied_StoreQueueCursor extends AbstractPendingMessage
     private int pendingCount;
     private final Queue queue;
     private PendingMessageCursor nonPersistent;
-    private final QueueStorePrefetch persistent;
+    private final test.messagecursor_copied.QueueStorePrefetch persistent;
     private PendingMessageCursor currentCursor;
 
     /**
@@ -48,7 +49,7 @@ public class SomewhatFair_Copied_StoreQueueCursor extends AbstractPendingMessage
         super((queue != null ? queue.isPrioritizedMessages() : false));
         this.broker = broker;
         this.queue = queue;
-        this.persistent = new QueueStorePrefetch(queue, broker);
+        this.persistent = new test.messagecursor_copied.QueueStorePrefetch(queue, broker);
         currentCursor = persistent;
     }
 
@@ -202,7 +203,7 @@ public class SomewhatFair_Copied_StoreQueueCursor extends AbstractPendingMessage
      * may do
      *
      * @return true if recovery required
-     * @see org.apache.activemq.broker.region.cursors.PendingMessageCursor
+     * @see PendingMessageCursor
      */
     @Override
     public boolean isRecoveryRequired() {
@@ -325,6 +326,20 @@ public class SomewhatFair_Copied_StoreQueueCursor extends AbstractPendingMessage
         }
     }
 
+    protected synchronized PendingMessageCursor getNextCursor_old() throws Exception {
+        if (currentCursor == null || !currentCursor.hasMessagesBufferedToDeliver()) {
+            currentCursor = currentCursor == persistent ? nonPersistent : persistent;
+            // sanity check
+            if (currentCursor.isEmpty()) {
+                currentCursor = currentCursor == persistent ? nonPersistent : persistent;
+            }
+        }
+        return currentCursor;
+    }
+
+    /**
+     * Note: Wrt. "SomewhatFair": This method is the only change, vs. {@link #getNextCursor_old()}.
+     */
     protected synchronized PendingMessageCursor getNextCursor() throws Exception {
         // ?: Sanity check that nonPersistent has been set, i.e. that start() has been invoked.
         if (nonPersistent == null) {

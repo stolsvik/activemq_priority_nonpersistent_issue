@@ -1,9 +1,8 @@
-package test.messagecursor_hacked;
+package test.messagecursor;
 
 import org.apache.activemq.broker.Broker;
 import org.apache.activemq.broker.region.cursors.PendingMessageCursor;
 import org.apache.activemq.broker.region.cursors.StoreQueueCursor;
-import test.messagecursor_copied.SomewhatFair_Copied_StoreQueueCursor;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;

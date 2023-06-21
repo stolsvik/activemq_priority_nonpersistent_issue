@@ -1,20 +1,21 @@
 package test;
 
 import org.apache.activemq.store.kahadb.disk.journal.Journal.JournalDiskSyncStrategy;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import test.Util.BrokerAndConnectionFactory;
 
-import javax.jms.Connection;
 import javax.jms.DeliveryMode;
-import javax.jms.Session;
-
 
 /**
- * @author Endre Stølsvik 2023-06-08 23:33 - http://stolsvik.com/, endre@stolsvik.com
+ * @author Endre Stølsvik 2023-06-21 14:01 - http://stolsvik.com/, endre@stolsvik.com
  */
-public class InOrderExpected_SendOnSameConnection {
+public abstract class OrderAndPriority_Base {
+
+    // ----- The common abstract test method.
+
+    protected abstract void test(int persistenceSet1, int prioritySet1, int persistenceSet2, int prioritySet2,
+            int[] expectedOrder) throws Exception;
 
     @BeforeClass
     public static void clearQueue() throws Exception {
@@ -89,36 +90,5 @@ public class InOrderExpected_SendOnSameConnection {
     @Test
     public void prioritizationSentDifferentOrder_nonPersistentBeforePersistent_0_9_Good() throws Exception {
         test(DeliveryMode.NON_PERSISTENT, 0, DeliveryMode.PERSISTENT, 9, new int[]{4, 5, 6, 7, 0, 1, 2, 3});
-    }
-
-    // ----- The common test method.
-
-    private void test(int persistenceSet1, int prioritySet1, int persistenceSet2, int prioritySet2,
-            int[] expectedOrder) throws Exception {
-        BrokerAndConnectionFactory brokerAndConnectionFactory = getBrokerAndConnectionFactory();
-
-        Connection connection = brokerAndConnectionFactory.getConnectionFactory().createConnection();
-        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-
-        Util.sendMessage(session, 0, persistenceSet1, prioritySet1);
-        Util.sendMessage(session, 1, persistenceSet1, prioritySet1);
-        Util.sendMessage(session, 2, persistenceSet1, prioritySet1);
-        Util.sendMessage(session, 3, persistenceSet1, prioritySet1);
-
-        Util.sendMessage(session, 4, persistenceSet2, prioritySet2);
-        Util.sendMessage(session, 5, persistenceSet2, prioritySet2);
-        Util.sendMessage(session, 6, persistenceSet2, prioritySet2);
-        Util.sendMessage(session, 7, persistenceSet2, prioritySet2);
-
-        int[] indices = Util.receiveMessagesInt(brokerAndConnectionFactory.getConnectionFactory(), 8);
-        connection.close();
-        brokerAndConnectionFactory.closeBroker();
-
-        Assert.assertArrayEquals(expectedOrder, indices);
-    }
-
-
-    private static BrokerAndConnectionFactory getBrokerAndConnectionFactory() throws Exception {
-        return Util.createBroker(JournalDiskSyncStrategy.PERIODIC, 1, 1, false);
     }
 }
