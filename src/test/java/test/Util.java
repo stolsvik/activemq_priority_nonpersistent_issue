@@ -167,6 +167,9 @@ public class Util {
         // :: We're using message priorities
         connectionFactory.setMessagePrioritySupported(true);
 
+        // Setting prefetch on ConnectionFactory - used to research client setting vs. server setting.
+        // connectionFactory.getPrefetchPolicy().setQueuePrefetch(1001);
+
         return new BrokerAndConnectionFactoryActiveMqImpl(brokerService, connectionFactory);
     }
 
@@ -268,9 +271,10 @@ public class Util {
         Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
         Queue queue = session.createQueue(TEST_QUEUE);
         MessageConsumer consumer = session.createConsumer(queue);
-        int receivedMessages = 0;
+        log.info("Going into RECEIVE LOOP!");
         do {
             Message msg = consumer.receive(250);
+            takeNap(4);
             if (msg == null) {
                 break;
             }

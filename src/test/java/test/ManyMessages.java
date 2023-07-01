@@ -9,6 +9,7 @@ import test.Util.BrokerAndConnectionFactory;
 
 import javax.jms.Connection;
 import javax.jms.DeliveryMode;
+import javax.jms.JMSException;
 import javax.jms.Session;
 
 /**
@@ -31,14 +32,26 @@ public class ManyMessages {
 
     // ----- The common test method.
 
-    private void runTest(int persistenceSet1, int prioritySet1, int persistenceSet2, int prioritySet2) throws Exception {
-        BrokerAndConnectionFactory brokerAndConnectionFactory = Util.createBroker(JournalDiskSyncStrategy.PERIODIC, 10, 1, true);
+    private void runTest(int persistenceSet1, int prioritySet1, int persistenceSet2,
+            int prioritySet2) throws Exception {
+        BrokerAndConnectionFactory brokerAndConnectionFactory = Util.createBroker(JournalDiskSyncStrategy.PERIODIC, 50, 500, true);
 
-        int standardMessages = 5000;
-        int interactiveMessages = 1000;
+        int standardMessages = 3000;
+        int interactiveMessages = 0;
 
         Connection connection1 = brokerAndConnectionFactory.getConnectionFactory().createConnection();
         Session session1 = connection1.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Thread thread = new Thread(() -> {
+            try {
+                Util.receiveMessagesInt(brokerAndConnectionFactory.getConnectionFactory(), standardMessages + interactiveMessages);
+            }
+            catch (JMSException e) {
+                throw new RuntimeException("Crash.", e);
+            }
+        });
+        thread.start();
+
 
         for (int i = 0; i < standardMessages; i++) {
             Util.sendMessage(session1, i, persistenceSet1, prioritySet1);
@@ -50,7 +63,7 @@ public class ManyMessages {
         }
         log.info("SENT: INTERACTIVE messages!");
 
-        int[] indices = Util.receiveMessagesInt(brokerAndConnectionFactory.getConnectionFactory(), standardMessages + interactiveMessages);
+        thread.join();
 
         connection1.close();
         brokerAndConnectionFactory.closeBroker();
