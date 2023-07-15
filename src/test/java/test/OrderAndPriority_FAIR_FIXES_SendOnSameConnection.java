@@ -11,7 +11,7 @@ import javax.jms.Session;
 /**
  * @author Endre Stølsvik 2023-06-08 23:33 - http://stolsvik.com/, endre@stolsvik.com
  */
-public class OrderAndPriority_FAIR_SendOnSameConnection extends OrderAndPriority_Base {
+public class OrderAndPriority_FAIR_FIXES_SendOnSameConnection extends OrderAndPriority_Base {
 
     @Override
     protected void test(int persistenceSet1, int prioritySet1, int persistenceSet2, int prioritySet2,

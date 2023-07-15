@@ -75,7 +75,8 @@ public class Mats3 {
 
         // :: ACT
 
-
+        // : First send standard, then send interactive:
+        // Standard
         matsFactory.getDefaultInitiator().initiateUnchecked(msg1 -> {
             for (int i1 = 0; i1 < standardMessages; i1++) {
                 DataTO dto1 = new DataTO(i1, "Standard");
@@ -84,6 +85,7 @@ public class Mats3 {
             log.info("SENT: Standard messages!");
         });
 
+        // Interactive:
         matsFactory.getDefaultInitiator().initiateUnchecked(msg -> {
             for (int i = 0; i < interactiveMessages; i++) {
                 DataTO dto = new DataTO(i, "INTERACTIVE");

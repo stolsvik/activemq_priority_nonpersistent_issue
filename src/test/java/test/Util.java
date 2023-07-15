@@ -46,16 +46,16 @@ public class Util {
      *         which {@link JournalDiskSyncStrategy} to use, <code>null</code> means non-persistent broker.
      * @param maxPageSize
      *         {@link BaseDestination#MAX_PAGE_SIZE} is 2000
-     * @param prefetch
+     * @param serverSidePrefetch
      *         {@link ActiveMQPrefetchPolicy#DEFAULT_QUEUE_PREFETCH} is 1000
-     * @param useSomewhatFair_StoreQueueCursor
+     * @param useFair_StoreQueueCursor
      *         use the hacked StoreQueueCursor.
      * @return a {@link BrokerAndConnectionFactory} instance, holding a broker and a ConnectionFactory.
      * @throws Exception
      *         if creation of broker throws.
      */
     static BrokerAndConnectionFactory createBroker(JournalDiskSyncStrategy syncStrategy,
-            int maxPageSize, int prefetch, boolean useSomewhatFair_StoreQueueCursor) throws Exception {
+            int maxPageSize, int serverSidePrefetch, boolean useFair_StoreQueueCursor) throws Exception {
         // :: CREATING BROKER
         BrokerService brokerService = new BrokerService();
         // brokerService.setBrokerName(BROKER_NAME);
@@ -117,8 +117,8 @@ public class Util {
         /*
          * Set the prefetch to provided argument (this affects the client, unless the client overrides by setting it)
          */
-        allQueuesPolicy.setQueuePrefetch(prefetch);
-        allTopicsPolicy.setTopicPrefetch(prefetch);
+        allQueuesPolicy.setQueuePrefetch(serverSidePrefetch);
+        allTopicsPolicy.setTopicPrefetch(serverSidePrefetch);
 
 
         /*
@@ -131,7 +131,7 @@ public class Util {
         /*
          * If desired, set the changed 'SomewhatFair_Copied_StoreQueueCursor', which half-way fixes the problem.
          */
-        if (useSomewhatFair_StoreQueueCursor) {
+        if (useFair_StoreQueueCursor) {
             allQueuesPolicy.setPendingQueuePolicy(new Fair_StorePendingQueueMessageStoragePolicy());
         }
 //        allQueuesPolicy.setPendingQueuePolicy(new VMPendingQueueMessageStoragePolicy());
@@ -167,7 +167,7 @@ public class Util {
         // :: We're using message priorities
         connectionFactory.setMessagePrioritySupported(true);
 
-        // Setting prefetch on ConnectionFactory - used to research client setting vs. server setting.
+        // NOTE: Setting prefetch on ConnectionFactory - used to research client setting vs. server setting.
         // connectionFactory.getPrefetchPolicy().setQueuePrefetch(1001);
 
         return new BrokerAndConnectionFactoryActiveMqImpl(brokerService, connectionFactory);

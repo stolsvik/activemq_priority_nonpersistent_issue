@@ -1,3 +1,21 @@
+# Some tests to understand how setting the prefetch on client vs. on server gives different results.
+
+tl;dr: The server checks if the value from the client _is the default_, in which case it instead uses its own set
+value (which is the same default, e.g. 1000 for queues). Notably, there is no "client set" flag or special value, it
+just compares against the default.
+
+This can then lead to interesting effects if the server sets a very low value, e.g. 10, and the client wants to use a
+higher value, and chooses the default (for example 1000 prefetch for queues), for example for a given ConnectionFactory
+or a specific consumer using 'Destination Options': The server will now assume that the client is "not set", and thus
+use the server-set low value. **It is thus important to not use the default value if you want to set the prefetch value
+from the client.**
+
+Scroll to bottom to see the code which does this comparison on the server side.
+
+To research this, I set the PrefetchPolicy on the ConnectionFactory in the Util.java and ManyMessages.java classes of
+this code.
+
+<pre>
 Prefetch 1000:
 maxPageSize: 200, prefetch (policy): 1000
 isEmpty true, next message 3601  (seemingly 2 x 200 + 1000)
@@ -118,20 +136,21 @@ Setting client higher than server 1001 vs. 500
 maxPageSize: 50, prefetch (policy): 500
 -> Okay, client wins
 isEmpty true, previous message 1899  (seemingly 2 x 50 + 1001)
+</pre>
 
-
+Empirical result: _"Client wins unless it is 1000 (default), in which case server wins"_
 
 Okay, so here's the actual code doing this logic:
 
 Basically, the server will check if the prefetch number is the default - and if yes, only then does it override
 with the PolicyEntry for the queue.
 
-Basically, the client side WINS unless it is default (1000) - in which case the serve side wins.
+Thus, the client side WINS unless it is default (1000) - in which case the serve side wins.
 
 PolicyEntry.java (server side):
 
+```java
     public void configurePrefetch(Subscription subscription) {
-
         final int currentPrefetch = subscription.getConsumerInfo().getPrefetchSize();
         if (subscription instanceof QueueBrowserSubscription) {
             if (currentPrefetch == ActiveMQPrefetchPolicy.DEFAULT_QUEUE_BROWSER_PREFETCH) {
@@ -156,3 +175,4 @@ PolicyEntry.java (server side):
             subscription.updateConsumerPrefetch(0);
         }
     }
+```

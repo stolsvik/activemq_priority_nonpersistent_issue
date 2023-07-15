@@ -2,6 +2,9 @@
 
 2023-06-10 - 2023-06-21
 
+_(Note: also did some research on how the setting of prefetch limit on server vs. on client affects the results, check
+[Researching prefetch](Researching%20prefetch.md).)_
+
 I am researching, and have identified, a problem with the default configuration of ActiveMQ's queue handling. It employs
 a class called *StoreQueueCursor*, and this again employs two sub cursors, one handling persistent messages, and the
 other handling non-persistent messages. The problem revolves around how it changes between these two "buckets".
